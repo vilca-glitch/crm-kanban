@@ -51,7 +51,7 @@ export default function TaskModal({
         setDueDate('');
       }
       setStageId(task.stageId);
-      setChecklist(task.checklist);
+      setChecklist(task.checklist || []);
     } else {
       // Reset for new task
       setTitle('');

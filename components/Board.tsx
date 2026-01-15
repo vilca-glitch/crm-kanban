@@ -366,6 +366,7 @@ export default function Board() {
 
       {/* Task Modal */}
       <TaskModal
+        key={editingTask?.id || 'new'}
         task={editingTask}
         stages={sortedStages}
         clients={clients}
