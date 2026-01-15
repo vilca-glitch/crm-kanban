@@ -7,7 +7,7 @@ import Column from './Column';
 import TaskModal from './TaskModal';
 import FilterBar from './FilterBar';
 import AddColumnButton from './AddColumnButton';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Board() {
@@ -316,8 +316,16 @@ export default function Board() {
         <h1 className="text-2xl font-bold text-gray-900">CRM Kanban</h1>
         <div className="flex items-center gap-2">
           <Link
+            href="/transcript"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Transcript"
+          >
+            <FileText className="w-5 h-5" />
+          </Link>
+          <Link
             href="/settings"
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Settings"
           >
             <Settings className="w-5 h-5" />
           </Link>

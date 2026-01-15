@@ -9,6 +9,20 @@ const crmClient = axios.create({
   timeout: 10000,
 });
 
+// Log bot activity to the database
+async function logActivity(userRequest, botAction, success = true, error = null) {
+  try {
+    await crmClient.post('/api/bot/activity', {
+      userRequest,
+      botAction,
+      success,
+      error,
+    });
+  } catch (err) {
+    console.error('Failed to log activity:', err.message);
+  }
+}
+
 async function checkForDueReminders() {
   try {
     const response = await crmClient.get('/api/reminders/check');
@@ -139,10 +153,22 @@ async function sendReminder(app, channelId, task) {
     // Mark reminder as sent
     await markReminderSent(task.id);
 
+    // Log the reminder activity
+    await logActivity(
+      '(Scheduled Reminder)',
+      `Sent reminder for "${task.title}" to #reminders`
+    );
+
     console.log(`Reminder sent for task: ${task.title}`);
     return true;
   } catch (error) {
     console.error('Error sending reminder:', error.message);
+    await logActivity(
+      '(Scheduled Reminder)',
+      `Failed to send reminder for "${task.title}"`,
+      false,
+      error.message
+    );
     return false;
   }
 }

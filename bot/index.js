@@ -1,6 +1,7 @@
 require('dotenv').config({ path: '.env.local' });
 
 const { App } = require('@slack/bolt');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { createTask, getStages, getClients, getTasks, updateTask } = require('./lib/crm');
@@ -8,6 +9,21 @@ const { parseTaskFromMessage, generateTaskSummary } = require('./lib/claude');
 const { processReminders } = require('./lib/reminders');
 
 const STATUS_FILE = path.join(__dirname, 'status.json');
+const CRM_BASE_URL = process.env.CRM_API_URL || 'http://localhost:3000';
+
+// Log bot activity to the database
+async function logActivity(userRequest, botAction, success = true, error = null) {
+  try {
+    await axios.post(`${CRM_BASE_URL}/api/bot/activity`, {
+      userRequest,
+      botAction,
+      success,
+      error,
+    });
+  } catch (err) {
+    console.error('Failed to log activity:', err.message);
+  }
+}
 
 // Validate required environment variables
 const requiredEnvVars = ['SLACK_BOT_TOKEN', 'SLACK_SIGNING_SECRET', 'SLACK_APP_TOKEN'];
@@ -196,6 +212,13 @@ async function handleCreateTask(text, say, threadTs = null) {
 
     const result = await createTask(taskData);
 
+    if (result && result.success && result.task) {
+      const botAction = `Created task "${result.task.title}" (${result.task.client || 'No client'}, ${result.task.priority} priority)`;
+      await logActivity(text, botAction, true);
+    } else {
+      await logActivity(text, `Failed to create task: ${result?.error || 'Unknown error'}`, false, result?.error);
+    }
+
     const messageOptions = {
       text: (result && result.success && result.task)
         ? `:white_check_mark: Task created!\n*${result.task.title}*\n` +
@@ -213,6 +236,7 @@ async function handleCreateTask(text, say, threadTs = null) {
     await say(messageOptions);
   } catch (error) {
     console.error('Error in handleCreateTask:', error);
+    await logActivity(text, `Error: ${error.message}`, false, error.message);
     const messageOptions = {
       text: `:x: Error creating task: ${error.message}`,
     };
@@ -229,6 +253,7 @@ async function handleShowTasks(say, threadTs = null) {
     const stages = await getStages();
 
     if (!tasks || tasks.length === 0) {
+      await logActivity('Show tasks', 'Listed 0 tasks', true);
       const messageOptions = {
         text: 'No tasks found. Create one by describing it to me!',
       };
@@ -236,6 +261,8 @@ async function handleShowTasks(say, threadTs = null) {
       await say(messageOptions);
       return;
     }
+
+    await logActivity('Show tasks', `Listed ${tasks.length} task(s)`, true);
 
     // Group tasks by stage
     const tasksByStage = {};
@@ -282,6 +309,8 @@ async function handleListClients(say, threadTs = null) {
   try {
     const clients = await getClients();
 
+    await logActivity('List clients', `Listed ${clients?.length || 0} client(s)`, true);
+
     const message = clients && clients.length > 0
       ? `:busts_in_silhouette: *Clients*\n${clients.map(c => `- ${c}`).join('\n')}`
       : 'No clients found yet. Create a task with a client name to add one!';
@@ -291,6 +320,7 @@ async function handleListClients(say, threadTs = null) {
     await say(messageOptions);
   } catch (error) {
     console.error('Error in handleListClients:', error);
+    await logActivity('List clients', `Error: ${error.message}`, false, error.message);
     const messageOptions = {
       text: `:x: Error fetching clients: ${error.message}`,
     };
@@ -303,6 +333,8 @@ async function handleListStages(say, threadTs = null) {
   try {
     const stages = await getStages();
 
+    await logActivity('List stages', `Listed ${stages?.length || 0} stage(s)`, true);
+
     const message = stages && stages.length > 0
       ? `:kanban: *Stages*\n${stages.map(s => `- ${s.name}`).join('\n')}`
       : 'No stages found.';
@@ -312,6 +344,7 @@ async function handleListStages(say, threadTs = null) {
     await say(messageOptions);
   } catch (error) {
     console.error('Error in handleListStages:', error);
+    await logActivity('List stages', `Error: ${error.message}`, false, error.message);
     const messageOptions = {
       text: `:x: Error fetching stages: ${error.message}`,
     };

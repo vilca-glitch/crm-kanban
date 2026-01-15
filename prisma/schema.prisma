@@ -38,3 +38,12 @@ model ChecklistItem {
   taskId    String
   task      Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
+
+model BotActivity {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  userRequest String
+  botAction   String
+  success     Boolean  @default(true)
+  error       String?
+}
