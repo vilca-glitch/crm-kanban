@@ -49,6 +49,16 @@ export async function PATCH(
     if (body.order !== undefined) updateData.order = body.order;
     if (body.dueDate !== undefined) {
       updateData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
+      // Reset reminder when deadline changes
+      updateData.reminderSent = false;
+    }
+    if (body.remindMeInHours !== undefined) {
+      updateData.remindMeInHours = body.remindMeInHours;
+      // Reset reminder when reminder setting changes
+      updateData.reminderSent = false;
+    }
+    if (body.reminderSent !== undefined) {
+      updateData.reminderSent = body.reminderSent;
     }
 
     // Handle checklist update if provided

@@ -2,8 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { Task, Stage, ChecklistItem, Priority } from '@/lib/types';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Bell } from 'lucide-react';
 import Checklist from './Checklist';
+
+const reminderOptions = [
+  { value: null, label: 'No reminder' },
+  { value: 1, label: '1 hour before' },
+  { value: 2, label: '2 hours before' },
+  { value: 6, label: '6 hours before' },
+  { value: 12, label: '12 hours before' },
+  { value: 24, label: '24 hours before' },
+  { value: 48, label: '48 hours before' },
+];
 
 interface TaskModalProps {
   task: Task | null;
@@ -34,6 +44,7 @@ export default function TaskModal({
   const [client, setClient] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [remindMeInHours, setRemindMeInHours] = useState<number | null>(null);
   const [stageId, setStageId] = useState('todo');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -50,6 +61,7 @@ export default function TaskModal({
       } else {
         setDueDate('');
       }
+      setRemindMeInHours(task.remindMeInHours ?? null);
       setStageId(task.stageId);
       setChecklist(task.checklist || []);
     } else {
@@ -58,6 +70,7 @@ export default function TaskModal({
       setClient('');
       setPriority('medium');
       setDueDate('');
+      setRemindMeInHours(null);
       setStageId('todo');
       setChecklist([]);
     }
@@ -69,6 +82,7 @@ export default function TaskModal({
       client: client.trim(),
       priority,
       dueDate: dueDate || null,
+      remindMeInHours: dueDate ? remindMeInHours : null, // Only set reminder if there's a due date
       stageId,
       checklist,
     };
@@ -177,9 +191,42 @@ export default function TaskModal({
             <input
               type="date"
               value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              onChange={(e) => {
+                setDueDate(e.target.value);
+                // Clear reminder if due date is cleared
+                if (!e.target.value) {
+                  setRemindMeInHours(null);
+                }
+              }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
             />
+          </div>
+
+          {/* Reminder */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="flex items-center gap-1">
+                <Bell className="w-4 h-4" />
+                Remind Me
+              </span>
+            </label>
+            <select
+              value={remindMeInHours ?? ''}
+              onChange={(e) => setRemindMeInHours(e.target.value ? Number(e.target.value) : null)}
+              disabled={!dueDate}
+              className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 ${
+                !dueDate ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+              }`}
+            >
+              {reminderOptions.map((option) => (
+                <option key={option.value ?? 'none'} value={option.value ?? ''}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {!dueDate && (
+              <p className="text-xs text-gray-400 mt-1">Set a due date to enable reminders</p>
+            )}
           </div>
 
           {/* Stage */}

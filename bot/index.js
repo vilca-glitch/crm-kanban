@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { createTask, getStages, getClients, getTasks, updateTask } = require('./lib/crm');
 const { parseTaskFromMessage, generateTaskSummary } = require('./lib/claude');
+const { processReminders } = require('./lib/reminders');
 
 const STATUS_FILE = path.join(__dirname, 'status.json');
 
@@ -330,6 +331,19 @@ async function handleListStages(say, threadTs = null) {
     setInterval(() => {
       updateStatus({ connected: true });
     }, 60000); // Update every minute
+
+    // Start reminder scheduler (check every 60 seconds)
+    const remindersChannel = process.env.SLACK_REMINDERS_CHANNEL;
+    if (remindersChannel) {
+      console.log(`Reminder scheduler started, posting to channel: ${remindersChannel}`);
+      setInterval(() => {
+        processReminders(app, remindersChannel);
+      }, 60000); // Check every minute
+      // Also run immediately on startup
+      processReminders(app, remindersChannel);
+    } else {
+      console.warn('SLACK_REMINDERS_CHANNEL not set - reminder notifications disabled');
+    }
   } catch (error) {
     console.error('Failed to start Slack bot:', error);
     updateStatus({ connected: false, error: error.message });

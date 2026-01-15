@@ -17,16 +17,18 @@ model Stage {
 }
 
 model Task {
-  id        String   @id @default(cuid())
-  title     String
-  client    String   @default("")
-  priority  String   @default("medium")
-  dueDate   DateTime?
-  createdAt DateTime @default(now())
-  order     Int      @default(0)
-  stageId   String
-  stage     Stage    @relation(fields: [stageId], references: [id])
-  checklist ChecklistItem[]
+  id              String   @id @default(cuid())
+  title           String
+  client          String   @default("")
+  priority        String   @default("medium")
+  dueDate         DateTime?
+  remindMeInHours Int?
+  reminderSent    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  order           Int      @default(0)
+  stageId         String
+  stage           Stage    @relation(fields: [stageId], references: [id])
+  checklist       ChecklistItem[]
 }
 
 model ChecklistItem {
