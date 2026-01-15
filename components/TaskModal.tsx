@@ -5,17 +5,11 @@ import { Task, Stage, ChecklistItem, Priority } from '@/lib/types';
 import { X, Trash2, Bell } from 'lucide-react';
 import Checklist from './Checklist';
 
-const reminderOptions = [
-  { value: null, label: 'No reminder' },
-  { value: 15, label: '15 minutes before' },
-  { value: 30, label: '30 minutes before' },
-  { value: 45, label: '45 minutes before' },
-  { value: 60, label: '1 hour before' },
-  { value: 120, label: '2 hours before' },
-  { value: 360, label: '6 hours before' },
-  { value: 720, label: '12 hours before' },
-  { value: 1440, label: '24 hours before' },
-  { value: 2880, label: '48 hours before' },
+const reminderPresets = [
+  { value: 15, label: '15m' },
+  { value: 30, label: '30m' },
+  { value: 60, label: '1h' },
+  { value: 120, label: '2h' },
 ];
 
 interface TaskModalProps {
@@ -130,6 +124,39 @@ export default function TaskModal({
   const filteredClients = clients.filter(c =>
     c.toLowerCase().includes(client.toLowerCase()) && c !== client
   );
+
+  // Calculate when the reminder will fire
+  const getCalculatedReminderTime = () => {
+    if (!dueDate || !remindMeInMinutes) return null;
+
+    const dueDateObj = dueTime
+      ? new Date(`${dueDate}T${dueTime}:00`)
+      : new Date(`${dueDate}T23:59:00`);
+
+    const reminderTime = new Date(dueDateObj.getTime() - remindMeInMinutes * 60 * 1000);
+
+    // Include date if it's a different day
+    const today = new Date();
+    const isToday = reminderTime.toDateString() === today.toDateString();
+
+    if (isToday) {
+      return reminderTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } else {
+      return reminderTime.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+  };
+
+  const calculatedReminderTime = getCalculatedReminderTime();
 
   if (!isOpen) return null;
 
@@ -253,20 +280,60 @@ export default function TaskModal({
                 Remind Me
               </span>
             </label>
-            <select
-              value={remindMeInMinutes ?? ''}
-              onChange={(e) => setRemindMeInMinutes(e.target.value ? Number(e.target.value) : null)}
-              disabled={!dueDate}
-              className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 ${
-                !dueDate ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
-              }`}
-            >
-              {reminderOptions.map((option) => (
-                <option key={option.value ?? 'none'} value={option.value ?? ''}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+
+            {/* Custom minutes input */}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                value={remindMeInMinutes ?? ''}
+                onChange={(e) => setRemindMeInMinutes(e.target.value ? Number(e.target.value) : null)}
+                placeholder="Minutes..."
+                disabled={!dueDate}
+                className={`w-24 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 ${
+                  !dueDate ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                }`}
+              />
+              <span className="text-sm text-gray-600">minutes before</span>
+              {remindMeInMinutes && (
+                <button
+                  type="button"
+                  onClick={() => setRemindMeInMinutes(null)}
+                  className="text-gray-400 hover:text-gray-600 text-sm"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Quick preset buttons */}
+            {dueDate && (
+              <div className="flex gap-1 mt-2">
+                {reminderPresets.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => setRemindMeInMinutes(preset.value)}
+                    className={`px-2 py-1 text-xs rounded border transition-colors ${
+                      remindMeInMinutes === preset.value
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Calculated reminder time */}
+            {calculatedReminderTime && (
+              <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
+                <Bell className="w-3 h-3" />
+                Will remind you at {calculatedReminderTime}
+              </p>
+            )}
+
             {!dueDate && (
               <p className="text-xs text-gray-400 mt-1">Set a due date to enable reminders</p>
             )}
