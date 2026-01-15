@@ -7,12 +7,15 @@ import Checklist from './Checklist';
 
 const reminderOptions = [
   { value: null, label: 'No reminder' },
-  { value: 1, label: '1 hour before' },
-  { value: 2, label: '2 hours before' },
-  { value: 6, label: '6 hours before' },
-  { value: 12, label: '12 hours before' },
-  { value: 24, label: '24 hours before' },
-  { value: 48, label: '48 hours before' },
+  { value: 15, label: '15 minutes before' },
+  { value: 30, label: '30 minutes before' },
+  { value: 45, label: '45 minutes before' },
+  { value: 60, label: '1 hour before' },
+  { value: 120, label: '2 hours before' },
+  { value: 360, label: '6 hours before' },
+  { value: 720, label: '12 hours before' },
+  { value: 1440, label: '24 hours before' },
+  { value: 2880, label: '48 hours before' },
 ];
 
 interface TaskModalProps {
@@ -44,7 +47,8 @@ export default function TaskModal({
   const [client, setClient] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [dueDate, setDueDate] = useState('');
-  const [remindMeInHours, setRemindMeInHours] = useState<number | null>(null);
+  const [dueTime, setDueTime] = useState('');
+  const [remindMeInMinutes, setRemindMeInMinutes] = useState<number | null>(null);
   const [stageId, setStageId] = useState('todo');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -58,10 +62,19 @@ export default function TaskModal({
       if (task.dueDate) {
         const date = typeof task.dueDate === 'string' ? new Date(task.dueDate) : task.dueDate;
         setDueDate(date.toISOString().split('T')[0]);
+        // Extract time if present (not end of day default)
+        const hours = date.getUTCHours();
+        const minutes = date.getUTCMinutes();
+        if (hours !== 23 || minutes !== 59) {
+          setDueTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+        } else {
+          setDueTime('');
+        }
       } else {
         setDueDate('');
+        setDueTime('');
       }
-      setRemindMeInHours(task.remindMeInHours ?? null);
+      setRemindMeInMinutes(task.remindMeInMinutes ?? null);
       setStageId(task.stageId);
       setChecklist(task.checklist || []);
     } else {
@@ -70,19 +83,31 @@ export default function TaskModal({
       setClient('');
       setPriority('medium');
       setDueDate('');
-      setRemindMeInHours(null);
+      setDueTime('');
+      setRemindMeInMinutes(null);
       setStageId('todo');
       setChecklist([]);
     }
   }, [task, isOpen]);
 
   const handleSave = () => {
+    // Combine date and time
+    let fullDueDate: string | null = null;
+    if (dueDate) {
+      if (dueTime) {
+        fullDueDate = `${dueDate}T${dueTime}:00`;
+      } else {
+        // Date only - use end of day (23:59) as implicit deadline
+        fullDueDate = `${dueDate}T23:59:00`;
+      }
+    }
+
     const taskData: Partial<Task> & { id?: string } = {
       title: title.trim() || 'Untitled Task',
       client: client.trim(),
       priority,
-      dueDate: dueDate || null,
-      remindMeInHours: dueDate ? remindMeInHours : null, // Only set reminder if there's a due date
+      dueDate: fullDueDate,
+      remindMeInMinutes: dueDate ? remindMeInMinutes : null, // Only set reminder if there's a due date
       stageId,
       checklist,
     };
@@ -193,13 +218,31 @@ export default function TaskModal({
               value={dueDate}
               onChange={(e) => {
                 setDueDate(e.target.value);
-                // Clear reminder if due date is cleared
+                // Clear reminder and time if due date is cleared
                 if (!e.target.value) {
-                  setRemindMeInHours(null);
+                  setRemindMeInMinutes(null);
+                  setDueTime('');
                 }
               }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
             />
+          </div>
+
+          {/* Due Time (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Due Time (optional)</label>
+            <input
+              type="time"
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+              disabled={!dueDate}
+              className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 ${
+                !dueDate ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+              }`}
+            />
+            {!dueDate && (
+              <p className="text-xs text-gray-400 mt-1">Set a due date first</p>
+            )}
           </div>
 
           {/* Reminder */}
@@ -211,8 +254,8 @@ export default function TaskModal({
               </span>
             </label>
             <select
-              value={remindMeInHours ?? ''}
-              onChange={(e) => setRemindMeInHours(e.target.value ? Number(e.target.value) : null)}
+              value={remindMeInMinutes ?? ''}
+              onChange={(e) => setRemindMeInMinutes(e.target.value ? Number(e.target.value) : null)}
               disabled={!dueDate}
               className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 ${
                 !dueDate ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''

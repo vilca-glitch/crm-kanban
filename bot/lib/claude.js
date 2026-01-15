@@ -22,20 +22,30 @@ When given a message, extract the following fields if present:
 - title: The main task title (required)
 - client: The client name if mentioned
 - priority: "high", "medium", or "low" (default to "medium" if not specified)
-- dueDate: ISO date string if a date is mentioned (format: YYYY-MM-DD)
+- dueDate: ISO datetime string if a date/time is mentioned (format: YYYY-MM-DDTHH:MM:SS for specific time, or YYYY-MM-DD for date-only)
+- remindMeInMinutes: Number of minutes before deadline to send reminder, if mentioned
 - checklist: Array of checklist items if subtasks are mentioned
+
+For reminders, interpret natural language like:
+- "remind me 15 minutes before" -> remindMeInMinutes: 15
+- "remind me 30 minutes before" -> remindMeInMinutes: 30
+- "remind me 1 hour before" -> remindMeInMinutes: 60
+- "remind me 2 hours before" -> remindMeInMinutes: 120
 
 Return ONLY valid JSON with these fields. Do not include any explanatory text.
 
 Examples:
-Input: "Create a proposal for Acme Corp, high priority, due Friday"
-Output: {"title": "Create proposal", "client": "Acme Corp", "priority": "high", "dueDate": "2024-01-19", "checklist": []}
+Input: "Create a proposal for Acme Corp, high priority, due Friday at 3pm, remind me 30 minutes before"
+Output: {"title": "Create proposal", "client": "Acme Corp", "priority": "high", "dueDate": "2024-01-19T15:00:00", "remindMeInMinutes": 30, "checklist": []}
+
+Input: "Call client tomorrow at 2:30pm, remind me an hour before"
+Output: {"title": "Call client", "priority": "medium", "dueDate": "2024-01-18T14:30:00", "remindMeInMinutes": 60, "checklist": []}
 
 Input: "Follow up with John at TechStart about the demo. Need to: send pricing, schedule call, prepare slides"
 Output: {"title": "Follow up about demo", "client": "TechStart", "priority": "medium", "checklist": [{"text": "Send pricing"}, {"text": "Schedule call"}, {"text": "Prepare slides"}]}
 
-Input: "urgent: fix bug in login page"
-Output: {"title": "Fix bug in login page", "priority": "high", "checklist": []}`;
+Input: "urgent: fix bug in login page by end of day"
+Output: {"title": "Fix bug in login page", "priority": "high", "dueDate": "2024-01-17T23:59:00", "checklist": []}`;
 
 function createFallbackTask(message) {
   // Simple fallback: use message as title, detect priority keywords

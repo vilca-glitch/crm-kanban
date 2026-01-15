@@ -22,7 +22,7 @@ model Task {
   client          String   @default("")
   priority        String   @default("medium")
   dueDate         DateTime?
-  remindMeInHours Int?
+  remindMeInMinutes Int?
   reminderSent    Boolean  @default(false)
   createdAt       DateTime @default(now())
   order           Int      @default(0)

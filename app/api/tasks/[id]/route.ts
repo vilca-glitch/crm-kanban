@@ -52,8 +52,8 @@ export async function PATCH(
       // Reset reminder when deadline changes
       updateData.reminderSent = false;
     }
-    if (body.remindMeInHours !== undefined) {
-      updateData.remindMeInHours = body.remindMeInHours;
+    if (body.remindMeInMinutes !== undefined) {
+      updateData.remindMeInMinutes = body.remindMeInMinutes;
       // Reset reminder when reminder setting changes
       updateData.reminderSent = false;
     }

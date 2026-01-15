@@ -15,7 +15,7 @@ export interface Task {
   stageId: string;
   priority: Priority;
   dueDate: string | Date | null;
-  remindMeInHours?: number | null;
+  remindMeInMinutes?: number | null;
   reminderSent?: boolean;
   createdAt: string | Date;
   order: number;

@@ -7,13 +7,13 @@ export async function GET() {
     const now = new Date();
 
     // Find tasks where:
-    // 1. remindMeInHours is set (not null)
+    // 1. remindMeInMinutes is set (not null)
     // 2. reminderSent is false
     // 3. dueDate is set (not null)
-    // 4. dueDate - remindMeInHours <= now (reminder time has passed)
+    // 4. dueDate - remindMeInMinutes <= now (reminder time has passed)
     const tasks = await prisma.task.findMany({
       where: {
-        remindMeInHours: { not: null },
+        remindMeInMinutes: { not: null },
         reminderSent: false,
         dueDate: { not: null },
       },
@@ -22,21 +22,24 @@ export async function GET() {
 
     // Filter tasks where reminder time has been reached
     const tasksNeedingReminders = tasks.filter((task) => {
-      if (!task.dueDate || !task.remindMeInHours) return false;
+      if (!task.dueDate || !task.remindMeInMinutes) return false;
 
       const dueDate = new Date(task.dueDate);
-      const reminderTime = new Date(dueDate.getTime() - task.remindMeInHours * 60 * 60 * 1000);
+      const reminderTime = new Date(dueDate.getTime() - task.remindMeInMinutes * 60 * 1000);
 
       return now >= reminderTime;
     });
 
-    // Calculate hours remaining for each task
+    // Calculate time remaining for each task
     const tasksWithTimeRemaining = tasksNeedingReminders.map((task) => {
       const dueDate = new Date(task.dueDate!);
-      const hoursRemaining = Math.max(0, Math.round((dueDate.getTime() - now.getTime()) / (60 * 60 * 1000)));
+      const msRemaining = dueDate.getTime() - now.getTime();
+      const minutesRemaining = Math.max(0, Math.round(msRemaining / (60 * 1000)));
+      const hoursRemaining = Math.floor(minutesRemaining / 60);
 
       return {
         ...task,
+        minutesRemaining,
         hoursRemaining,
       };
     });

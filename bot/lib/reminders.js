@@ -36,9 +36,37 @@ function formatReminderMessage(task) {
   const priorityEmoji = task.priority === 'high' ? ':red_circle:' :
                         task.priority === 'medium' ? ':large_yellow_circle:' : ':large_green_circle:';
 
-  const hoursText = task.hoursRemaining === 0 ? 'now' :
-                    task.hoursRemaining === 1 ? 'in 1 hour' :
-                    `in ${task.hoursRemaining} hours`;
+  // Format time remaining with minute-level precision
+  let timeText;
+  const mins = task.minutesRemaining || 0;
+  if (mins === 0) {
+    timeText = 'now';
+  } else if (mins < 60) {
+    timeText = mins === 1 ? 'in 1 minute' : `in ${mins} minutes`;
+  } else {
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    if (remainingMins === 0) {
+      timeText = hours === 1 ? 'in 1 hour' : `in ${hours} hours`;
+    } else {
+      timeText = `in ${hours}h ${remainingMins}m`;
+    }
+  }
+
+  // Add specific due time if not end of day
+  let dueTimeDisplay = '';
+  if (task.dueDate) {
+    const dueDate = new Date(task.dueDate);
+    const hours = dueDate.getHours();
+    const minutes = dueDate.getMinutes();
+    if (hours !== 23 || minutes !== 59) {
+      dueTimeDisplay = ` at ${dueDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })}`;
+    }
+  }
 
   const taskUrl = `${CRM_PUBLIC_URL}/?task=${task.id}`;
 
@@ -76,7 +104,7 @@ function formatReminderMessage(task) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `:clock1: *Due ${hoursText}*`,
+          text: `:clock1: *Due ${timeText}*${dueTimeDisplay}`,
         },
       },
       {
@@ -95,7 +123,7 @@ function formatReminderMessage(task) {
         ],
       },
     ],
-    text: `Reminder: "${task.title}" is due ${hoursText}`,
+    text: `Reminder: "${task.title}" is due ${timeText}${dueTimeDisplay}`,
   };
 }
 

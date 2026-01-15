@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         client: body.client || '',
         priority: body.priority || 'medium',
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
-        remindMeInHours: body.remindMeInHours || null,
+        remindMeInMinutes: body.remindMeInMinutes || null,
         reminderSent: false,
         stageId: body.stageId || 'todo',
         order: nextOrder,
