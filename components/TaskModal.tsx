@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Task, Stage, ChecklistItem } from '@/lib/types';
+import { Task, Stage, ChecklistItem, Priority } from '@/lib/types';
 import { X, Trash2 } from 'lucide-react';
 import Checklist from './Checklist';
 
@@ -43,7 +43,13 @@ export default function TaskModal({
       setTitle(task.title);
       setClient(task.client);
       setPriority(task.priority);
-      setDueDate(task.dueDate || '');
+      // Convert Date to string for input
+      if (task.dueDate) {
+        const date = typeof task.dueDate === 'string' ? new Date(task.dueDate) : task.dueDate;
+        setDueDate(date.toISOString().split('T')[0]);
+      } else {
+        setDueDate('');
+      }
       setStageId(task.stageId);
       setChecklist(task.checklist);
     } else {

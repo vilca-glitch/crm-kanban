@@ -1,6 +1,6 @@
 'use client';
 
-import { Task } from '@/lib/types';
+import { Task, Priority } from '@/lib/types';
 import { Draggable } from '@hello-pangea/dnd';
 import { Calendar, User } from 'lucide-react';
 import Checklist from './Checklist';
@@ -11,16 +11,16 @@ interface TaskCardProps {
   onClick: () => void;
 }
 
-const priorityColors = {
+const priorityColors: Record<Priority, string> = {
   high: 'bg-red-500',
   medium: 'bg-yellow-500',
   low: 'bg-green-500',
 };
 
 export default function TaskCard({ task, index, onClick }: TaskCardProps) {
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
+  const formatDate = (dateVal: string | Date | null) => {
+    if (!dateVal) return null;
+    const date = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
@@ -61,7 +61,7 @@ export default function TaskCard({ task, index, onClick }: TaskCardProps) {
           {task.dueDate && (
             <div className="flex items-center gap-1 text-gray-500 text-xs">
               <Calendar className="w-3 h-3" />
-              <span>{formatDate(task.dueDate)}</span>
+              <span>{formatDate(task.dueDate as string | Date | null)}</span>
             </div>
           )}
         </div>

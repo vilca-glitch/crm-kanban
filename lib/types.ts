@@ -5,13 +5,15 @@ export interface ChecklistItem {
   taskId?: string;
 }
 
+export type Priority = 'low' | 'medium' | 'high';
+
 export interface Task {
   id: string;
   title: string;
   client: string;
   checklist: ChecklistItem[];
   stageId: string;
-  priority: string;
+  priority: Priority;
   dueDate: string | Date | null;
   createdAt: string | Date;
   order: number;
