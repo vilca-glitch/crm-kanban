@@ -1,0 +1,112 @@
+{
+  "stages": [
+    {
+      "id": "todo",
+      "name": "To Do",
+      "order": 0,
+      "color": "#6B7280"
+    },
+    {
+      "id": "in-progress",
+      "name": "In Progress",
+      "order": 1,
+      "color": "#3B82F6"
+    },
+    {
+      "id": "complete",
+      "name": "Complete",
+      "order": 2,
+      "color": "#10B981"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1",
+      "title": "Initial client call",
+      "client": "Acme Corp",
+      "checklist": [
+        {
+          "id": "item-1",
+          "text": "Prepare agenda",
+          "completed": true
+        },
+        {
+          "id": "item-2",
+          "text": "Send calendar invite",
+          "completed": false
+        }
+      ],
+      "stageId": "todo",
+      "priority": "high",
+      "dueDate": "2025-01-20",
+      "createdAt": "2025-01-15T10:00:00Z",
+      "order": 0
+    },
+    {
+      "id": "task-2",
+      "title": "Follow up on proposal",
+      "client": "Beta Inc",
+      "checklist": [
+        {
+          "id": "item-3",
+          "text": "Review feedback",
+          "completed": false
+        },
+        {
+          "id": "item-4",
+          "text": "Update pricing",
+          "completed": false
+        },
+        {
+          "id": "item-5",
+          "text": "Send revised version",
+          "completed": false
+        }
+      ],
+      "stageId": "in-progress",
+      "priority": "medium",
+      "dueDate": "2025-01-22",
+      "createdAt": "2025-01-14T09:00:00Z",
+      "order": 0
+    },
+    {
+      "id": "task-3",
+      "title": "Contract signed",
+      "client": "Gamma LLC",
+      "checklist": [
+        {
+          "id": "item-6",
+          "text": "Send welcome email",
+          "completed": true
+        },
+        {
+          "id": "item-7",
+          "text": "Schedule kickoff",
+          "completed": true
+        }
+      ],
+      "stageId": "complete",
+      "priority": "low",
+      "dueDate": null,
+      "createdAt": "2025-01-10T14:00:00Z",
+      "order": 0
+    },
+    {
+      "id": "task-ea4b2078-2a49-4805-9061-af3eac5b967b",
+      "title": "Test from Slack",
+      "client": "Test Client",
+      "checklist": [
+        {
+          "id": "item-922f6d66-ea57-4fab-a969-6953205175d1",
+          "text": "Test item 1",
+          "completed": false
+        }
+      ],
+      "stageId": "todo",
+      "priority": "medium",
+      "dueDate": null,
+      "createdAt": "2026-01-15T02:14:53.085Z",
+      "order": 1
+    }
+  ]
+}
