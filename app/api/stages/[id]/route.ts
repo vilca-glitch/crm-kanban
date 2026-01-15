@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDB, writeDB } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/stages/[id] - Get single stage
 export async function GET(
@@ -7,8 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = readDB();
-  const stage = db.stages.find(s => s.id === id);
+
+  const stage = await prisma.stage.findUnique({
+    where: { id },
+  });
 
   if (!stage) {
     return NextResponse.json({ error: 'Stage not found' }, { status: 404 });
@@ -25,26 +27,19 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const db = readDB();
 
-    const stageIndex = db.stages.findIndex(s => s.id === id);
-    if (stageIndex === -1) {
-      return NextResponse.json({ error: 'Stage not found' }, { status: 404 });
-    }
-
-    // Update only provided fields
-    const updatedStage = {
-      ...db.stages[stageIndex],
-      ...body,
-      id: db.stages[stageIndex].id, // Prevent id override
-    };
-
-    db.stages[stageIndex] = updatedStage;
-    writeDB(db);
+    const updatedStage = await prisma.stage.update({
+      where: { id },
+      data: {
+        name: body.name !== undefined ? body.name : undefined,
+        color: body.color !== undefined ? body.color : undefined,
+        order: body.order !== undefined ? body.order : undefined,
+      },
+    });
 
     return NextResponse.json({ success: true, stage: updatedStage });
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({ error: 'Stage not found' }, { status: 404 });
   }
 }
 
@@ -54,24 +49,26 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = readDB();
-
-  const stageIndex = db.stages.findIndex(s => s.id === id);
-  if (stageIndex === -1) {
-    return NextResponse.json({ error: 'Stage not found' }, { status: 404 });
-  }
 
   // Check if stage has tasks
-  const tasksInStage = db.tasks.filter(t => t.stageId === id);
-  if (tasksInStage.length > 0) {
+  const tasksInStage = await prisma.task.count({
+    where: { stageId: id },
+  });
+
+  if (tasksInStage > 0) {
     return NextResponse.json(
       { error: 'Cannot delete stage with tasks. Move or delete tasks first.' },
       { status: 400 }
     );
   }
 
-  db.stages.splice(stageIndex, 1);
-  writeDB(db);
+  try {
+    await prisma.stage.delete({
+      where: { id },
+    });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: 'Stage not found' }, { status: 404 });
+  }
 }

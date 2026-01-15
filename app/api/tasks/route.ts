@@ -1,42 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDB, writeDB } from '@/lib/db';
-import { Task } from '@/lib/types';
-import { v4 as uuidv4 } from 'uuid';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/tasks - Get all tasks with optional filters
 export async function GET(request: NextRequest) {
-  const db = readDB();
   const { searchParams } = new URL(request.url);
 
-  let tasks = db.tasks;
+  const where: Record<string, unknown> = {};
 
   // Filter by client
   const client = searchParams.get('client');
   if (client) {
-    tasks = tasks.filter(t => t.client.toLowerCase() === client.toLowerCase());
+    where.client = { equals: client, mode: 'insensitive' };
   }
 
   // Filter by priority
   const priority = searchParams.get('priority');
   if (priority) {
-    tasks = tasks.filter(t => t.priority === priority);
+    where.priority = priority;
   }
 
   // Filter by stageId
   const stageId = searchParams.get('stageId');
   if (stageId) {
-    tasks = tasks.filter(t => t.stageId === stageId);
+    where.stageId = stageId;
   }
 
-  // Search in title and checklist
+  // Search in title
   const search = searchParams.get('search');
   if (search) {
-    const searchLower = search.toLowerCase();
-    tasks = tasks.filter(t =>
-      t.title.toLowerCase().includes(searchLower) ||
-      t.checklist.some(item => item.text.toLowerCase().includes(searchLower))
-    );
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { checklist: { some: { text: { contains: search, mode: 'insensitive' } } } },
+    ];
   }
+
+  const tasks = await prisma.task.findMany({
+    where,
+    include: { checklist: true },
+    orderBy: { order: 'asc' },
+  });
 
   return NextResponse.json(tasks);
 }
@@ -45,35 +47,62 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const db = readDB();
 
     // Get max order for the stage
-    const stageTasks = db.tasks.filter(t => t.stageId === (body.stageId || 'todo'));
-    const maxOrder = stageTasks.length > 0
-      ? Math.max(...stageTasks.map(t => t.order)) + 1
-      : 0;
+    const maxOrderTask = await prisma.task.findFirst({
+      where: { stageId: body.stageId || 'todo' },
+      orderBy: { order: 'desc' },
+      select: { order: true },
+    });
+    const nextOrder = (maxOrderTask?.order ?? -1) + 1;
 
-    const newTask: Task = {
-      id: `task-${uuidv4()}`,
-      title: body.title || 'Untitled Task',
-      client: body.client || '',
-      checklist: (body.checklist || []).map((item: { text: string; completed?: boolean }) => ({
-        id: `item-${uuidv4()}`,
-        text: item.text,
-        completed: item.completed || false,
-      })),
-      stageId: body.stageId || 'todo',
-      priority: body.priority || 'medium',
-      dueDate: body.dueDate || null,
-      createdAt: new Date().toISOString(),
-      order: maxOrder,
-    };
+    // First verify the stage exists, create default if not
+    let stage = await prisma.stage.findUnique({
+      where: { id: body.stageId || 'todo' },
+    });
 
-    db.tasks.push(newTask);
-    writeDB(db);
+    if (!stage) {
+      // Create default stages if they don't exist
+      const defaultStages = [
+        { id: 'todo', name: 'To Do', order: 0, color: '#6B7280' },
+        { id: 'in-progress', name: 'In Progress', order: 1, color: '#3B82F6' },
+        { id: 'complete', name: 'Complete', order: 2, color: '#10B981' },
+      ];
+
+      for (const s of defaultStages) {
+        await prisma.stage.upsert({
+          where: { id: s.id },
+          update: {},
+          create: s,
+        });
+      }
+
+      stage = await prisma.stage.findUnique({
+        where: { id: body.stageId || 'todo' },
+      });
+    }
+
+    const newTask = await prisma.task.create({
+      data: {
+        title: body.title || 'Untitled Task',
+        client: body.client || '',
+        priority: body.priority || 'medium',
+        dueDate: body.dueDate ? new Date(body.dueDate) : null,
+        stageId: body.stageId || 'todo',
+        order: nextOrder,
+        checklist: {
+          create: (body.checklist || []).map((item: { text: string; completed?: boolean }) => ({
+            text: item.text,
+            completed: item.completed || false,
+          })),
+        },
+      },
+      include: { checklist: true },
+    });
 
     return NextResponse.json({ success: true, task: newTask }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error('Failed to create task:', error);
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }

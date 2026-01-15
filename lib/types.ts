@@ -2,6 +2,7 @@ export interface ChecklistItem {
   id: string;
   text: string;
   completed: boolean;
+  taskId?: string;
 }
 
 export interface Task {
@@ -10,9 +11,9 @@ export interface Task {
   client: string;
   checklist: ChecklistItem[];
   stageId: string;
-  priority: 'low' | 'medium' | 'high';
-  dueDate: string | null;
-  createdAt: string;
+  priority: string;
+  dueDate: string | Date | null;
+  createdAt: string | Date;
   order: number;
 }
 
@@ -21,9 +22,4 @@ export interface Stage {
   name: string;
   order: number;
   color: string;
-}
-
-export interface Database {
-  stages: Stage[];
-  tasks: Task[];
 }

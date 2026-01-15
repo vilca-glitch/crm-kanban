@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDB, writeDB } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 // PUT /api/stages/reorder - Reorder stages
 export async function PUT(request: NextRequest) {
@@ -11,19 +11,21 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'stageIds must be an array' }, { status: 400 });
     }
 
-    const db = readDB();
-
     // Update order based on position in array
-    stageIds.forEach((stageId: string, index: number) => {
-      const stage = db.stages.find(s => s.id === stageId);
-      if (stage) {
-        stage.order = index;
-      }
+    await Promise.all(
+      stageIds.map((stageId: string, index: number) =>
+        prisma.stage.update({
+          where: { id: stageId },
+          data: { order: index },
+        })
+      )
+    );
+
+    const stages = await prisma.stage.findMany({
+      orderBy: { order: 'asc' },
     });
 
-    writeDB(db);
-
-    return NextResponse.json({ success: true, stages: db.stages.sort((a, b) => a.order - b.order) });
+    return NextResponse.json({ success: true, stages });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

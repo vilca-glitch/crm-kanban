@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
-import { readDB } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/clients - Get unique client names
 export async function GET() {
-  const db = readDB();
+  const tasks = await prisma.task.findMany({
+    where: {
+      client: { not: '' },
+    },
+    select: { client: true },
+    distinct: ['client'],
+    orderBy: { client: 'asc' },
+  });
 
-  // Extract unique client names from tasks
-  const clients = [...new Set(db.tasks.map(t => t.client).filter(Boolean))].sort();
+  const clients = tasks.map((t) => t.client);
 
   return NextResponse.json(clients);
 }

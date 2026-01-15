@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDB, writeDB } from '@/lib/db';
-import { Stage } from '@/lib/types';
-import { v4 as uuidv4 } from 'uuid';
+import { prisma } from '@/lib/prisma';
 
 // GET /api/stages - Get all stages
 export async function GET() {
-  const db = readDB();
-  const stages = db.stages.sort((a, b) => a.order - b.order);
+  let stages = await prisma.stage.findMany({
+    orderBy: { order: 'asc' },
+  });
+
+  // If no stages exist, create defaults
+  if (stages.length === 0) {
+    const defaultStages = [
+      { id: 'todo', name: 'To Do', order: 0, color: '#6B7280' },
+      { id: 'in-progress', name: 'In Progress', order: 1, color: '#3B82F6' },
+      { id: 'complete', name: 'Complete', order: 2, color: '#10B981' },
+    ];
+
+    for (const stage of defaultStages) {
+      await prisma.stage.create({ data: stage });
+    }
+
+    stages = await prisma.stage.findMany({
+      orderBy: { order: 'asc' },
+    });
+  }
+
   return NextResponse.json(stages);
 }
 
@@ -14,22 +31,21 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const db = readDB();
 
     // Get max order
-    const maxOrder = db.stages.length > 0
-      ? Math.max(...db.stages.map(s => s.order)) + 1
-      : 0;
+    const maxOrderStage = await prisma.stage.findFirst({
+      orderBy: { order: 'desc' },
+      select: { order: true },
+    });
+    const nextOrder = (maxOrderStage?.order ?? -1) + 1;
 
-    const newStage: Stage = {
-      id: `stage-${uuidv4()}`,
-      name: body.name || 'New Stage',
-      order: maxOrder,
-      color: body.color || '#6B7280',
-    };
-
-    db.stages.push(newStage);
-    writeDB(db);
+    const newStage = await prisma.stage.create({
+      data: {
+        name: body.name || 'New Stage',
+        order: nextOrder,
+        color: body.color || '#6B7280',
+      },
+    });
 
     return NextResponse.json({ success: true, stage: newStage }, { status: 201 });
   } catch {

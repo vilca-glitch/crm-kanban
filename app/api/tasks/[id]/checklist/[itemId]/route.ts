@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDB, writeDB } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 // PATCH /api/tasks/[id]/checklist/[itemId] - Update checklist item
 export async function PATCH(
@@ -9,32 +9,28 @@ export async function PATCH(
   try {
     const { id, itemId } = await params;
     const body = await request.json();
-    const db = readDB();
 
-    const taskIndex = db.tasks.findIndex(t => t.id === id);
-    if (taskIndex === -1) {
+    // Verify task exists
+    const task = await prisma.task.findUnique({
+      where: { id },
+    });
+
+    if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    const task = db.tasks[taskIndex];
-    const itemIndex = task.checklist.findIndex(item => item.id === itemId);
-    if (itemIndex === -1) {
-      return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
-    }
-
     // Update the checklist item
-    task.checklist[itemIndex] = {
-      ...task.checklist[itemIndex],
-      ...body,
-      id: task.checklist[itemIndex].id, // Prevent id override
-    };
+    const updatedItem = await prisma.checklistItem.update({
+      where: { id: itemId },
+      data: {
+        completed: body.completed !== undefined ? body.completed : undefined,
+        text: body.text !== undefined ? body.text : undefined,
+      },
+    });
 
-    db.tasks[taskIndex] = task;
-    writeDB(db);
-
-    return NextResponse.json({ success: true, item: task.checklist[itemIndex] });
+    return NextResponse.json({ success: true, item: updatedItem });
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
   }
 }
 
@@ -43,23 +39,24 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
-  const { id, itemId } = await params;
-  const db = readDB();
+  try {
+    const { id, itemId } = await params;
 
-  const taskIndex = db.tasks.findIndex(t => t.id === id);
-  if (taskIndex === -1) {
-    return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-  }
+    // Verify task exists
+    const task = await prisma.task.findUnique({
+      where: { id },
+    });
 
-  const task = db.tasks[taskIndex];
-  const itemIndex = task.checklist.findIndex(item => item.id === itemId);
-  if (itemIndex === -1) {
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    await prisma.checklistItem.delete({
+      where: { id: itemId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch {
     return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
   }
-
-  task.checklist.splice(itemIndex, 1);
-  db.tasks[taskIndex] = task;
-  writeDB(db);
-
-  return NextResponse.json({ success: true });
 }
